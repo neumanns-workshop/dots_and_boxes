@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Dots and Boxes – 4×4 DQN Training</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <style>
+      /* Minimalist, sleek, and modern styling */
+      html, body {
+        margin: 0;
+        padding: 20px;  /* Add some padding */
+        min-height: 100vh;  /* Use minimum height instead of fixed */
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        background: #1e1e1e;
+        font-family: 'Space Grotesk', sans-serif;
+        color: #f5f5f5;
+        text-align: center;
+        overflow-y: auto;  /* Allow vertical scrolling */
+      }
+
+      /* Remove justify-content: center to prevent vertical centering */
+      body {
+        justify-content: flex-start;  /* Align content to top */
+      }
+
+      /* Add some spacing between elements */
+      h1, h2, h3 {
+        margin: 20px 0;  /* Increase top/bottom margin */
+        font-weight: 600;
+        letter-spacing: -0.02em;
+      }
+
+      #gameContainer {
+        margin: 20px 0;
+        display: flex;
+        flex-direction: row;  /* Changed from column */
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+        background: #292929;
+        padding: 20px;
+        border-radius: 12px;
+        width: 800px;
+      }
+
+      .game-center {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      #stats {
+        margin-top: 10px;
+        font-size: 1rem;
+        line-height: 1.5;
+        min-width: 200px;  /* Fixed width */
+        font-family: 'Space Grotesk', monospace;  /* Monospace for numbers */
+      }
+
+      .stat-row {
+        display: flex;
+        justify-content: space-between;
+        margin: 4px 0;
+        white-space: nowrap;  /* Prevent wrapping */
+      }
+
+      .stat-label {
+        color: #aaa;
+        margin-right: 12px;
+      }
+
+      .stat-value {
+        font-variant-numeric: tabular-nums;  /* Align numbers */
+      }
+
+      .score-section {
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid #333;
+      }
+
+      /* Add to existing styles */
+      #metricsContainer {
+        margin: 20px 0;  /* Add vertical margin */
+        padding: 20px;
+        background: #292929;
+        border-radius: 12px;
+        width: 800px;
+      }
+      
+      .metrics-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+      }
+      
+      .metric-card {
+        background: #1e1e1e;
+        padding: 15px;
+        border-radius: 8px;
+      }
+      
+      .chart-container {
+        position: relative;
+        height: 200px;
+      }
+
+      #controlsContainer {
+        margin: 10px 0;
+        width: 800px;
+      }
+
+      .control-panel {
+        background: #292929;
+        padding: 15px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+      }
+
+      .control-btn {
+        background: #2196f3;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 500;
+        transition: background-color 0.2s;
+      }
+
+      .control-btn:hover {
+        background: #1976d2;
+      }
+
+      .speed-control {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      input[type="range"] {
+        width: 150px;
+        accent-color: #2196f3;
+      }
+
+      #speedValue {
+        min-width: 40px;
+      }
+
+      /* Add tooltip styles */
+      .tooltip-container {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .tooltip-icon {
+        cursor: help;
+        color: #666;
+        font-size: 14px;
+        width: 16px;
+        height: 16px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #666;
+        border-radius: 50%;
+      }
+
+      .tooltip-text {
+        visibility: hidden;
+        position: absolute;
+        z-index: 1;
+        bottom: 125%;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: #333;
+        color: #fff;
+        text-align: center;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 14px;
+        width: 200px;
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
+
+      .tooltip-container:hover .tooltip-text {
+        visibility: visible;
+        opacity: 1;
+      }
+
+      /* Add rules section styles */
+      #rulesContainer {
+        margin: 20px 0;
+        width: 800px;
+        background: #292929;
+        padding: 20px;
+        border-radius: 12px;
+        text-align: left;
+      }
+
+      #rulesContainer h2 {
+        margin-top: 0;
+        color: #2196f3;
+      }
+
+      .rules-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-top: 15px;
+      }
+
+      .rule-item {
+        background: #1e1e1e;
+        padding: 15px;
+        border-radius: 8px;
+      }
+
+      .agent-container {
+        display: flex;
+        justify-content: space-between;
+        width: 800px;
+        margin: 20px 0;
+      }
+
+      #playContainer {
+        margin: 20px 0;
+        width: 800px;
+        background: #292929;
+        padding: 20px;
+        border-radius: 12px;
+      }
+
+      .play-grid {
+        display: grid;
+        grid-template-columns: 300px 1fr;
+        gap: 20px;
+        margin-top: 15px;
+      }
+
+      .checkpoint-list {
+        background: #1e1e1e;
+        padding: 15px;
+        border-radius: 8px;
+        max-height: 400px;
+        overflow-y: auto;
+      }
+
+      .checkpoint-item {
+        padding: 10px;
+        margin: 5px 0;
+        background: #292929;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background 0.2s;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .checkpoint-item:hover {
+        background: #333;
+      }
+
+      .checkpoint-item.selected {
+        background: #2196f3;
+        color: white;
+      }
+
+      .episode-number {
+        font-variant-numeric: tabular-nums;
+      }
+
+      .game-board {
+        background: #1e1e1e;
+        padding: 15px;
+        border-radius: 8px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 15px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="gameContainer">
+      <canvas id="gameCanvas" width="500" height="500"></canvas>
+      <div id="stats"></div>
+    </div>
+
+    <div id="rulesContainer">
+      <h2>Dots and Boxes - AI Training</h2>
+      <p>Watch two AI agents learn to play Dots and Boxes through deep reinforcement learning.</p>
+      
+      <div class="rules-grid">
+        <div class="rule-item">
+          <h3>Game Rules</h3>
+          <ul>
+            <li>Players take turns drawing lines between dots</li>
+            <li>Completing a box earns 1 point and an extra turn</li>
+            <li>Game ends when all lines are drawn</li>
+            <li>Player with the most boxes wins</li>
+          </ul>
+        </div>
+        <div class="rule-item">
+          <h3>AI Training</h3>
+          <ul>
+            <li>Blue and Green agents learn through self-play</li>
+            <li>Uses Deep Q-Learning with dueling networks</li>
+            <li>Agents improve by maximizing box completion</li>
+            <li>Training metrics show learning progress</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div id="metricsContainer">
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="tooltip-container">
+            <h3>Win Rates</h3>
+            <span class="tooltip-icon">?
+              <span class="tooltip-text">
+                Percentage of boxes captured by each agent.
+                Higher values indicate better performance.
+              </span>
+            </span>
+          </div>
+          <div class="chart-container">
+            <canvas id="winRateChart"></canvas>
+          </div>
+        </div>
+        <div class="metric-card">
+          <div class="tooltip-container">
+            <h3>Evaluation Scores</h3>
+            <span class="tooltip-icon">?
+              <span class="tooltip-text">
+                Average boxes captured in test games.
+                Agents play their best moves without random exploration,
+                showing true skill level.
+              </span>
+            </span>
+          </div>
+          <div class="chart-container">
+            <canvas id="evalChart"></canvas>
+          </div>
+        </div>
+        <div class="metric-card">
+          <div class="tooltip-container">
+            <h3>Average Q-Values</h3>
+            <span class="tooltip-icon">?
+              <span class="tooltip-text">
+                Agent's estimated value of its actions.
+                Higher values indicate more confident decisions.
+              </span>
+            </span>
+          </div>
+          <div class="chart-container">
+            <canvas id="qValueChart"></canvas>
+          </div>
+        </div>
+        <div class="metric-card">
+          <div class="tooltip-container">
+            <h3>Move Quality</h3>
+            <span class="tooltip-icon">?
+              <span class="tooltip-text">
+                Difference between chosen move and best possible move.
+                Lower values indicate better decision-making.
+              </span>
+            </span>
+          </div>
+          <div class="chart-container">
+            <canvas id="moveQualityChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="controlsContainer">
+        <div class="control-panel">
+            <button id="pauseButton" class="control-btn">
+                <span class="btn-text">Pause</span>
+            </button>
+            <div class="speed-control">
+                <label>Speed:</label>
+                <input 
+                    type="range" 
+                    min="0.2"
+                    max="5.0"
+                    step="0.4"
+                    value="1.0" 
+                    id="speedSlider"
+                >
+                <span id="speedValue">1.0x</span>
+            </div>
+        </div>
+    </div>
+
+    <div id="playContainer">
+        <h2>Play vs AI</h2>
+        <div class="play-grid">
+            <div class="checkpoint-list">
+                <h3>Select Checkpoint</h3>
+                <div id="checkpointsList"></div>
+                <button id="refreshCheckpoints" class="control-btn">
+                    Refresh Checkpoints
+                </button>
+            </div>
+            <div class="game-board">
+                <canvas id="humanGameCanvas" width="400" height="400"></canvas>
+                <div class="game-controls">
+                    <button id="startGame" class="control-btn">Start Game</button>
+                    <button id="resetGame" class="control-btn">Reset</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+      const socket = io();
+      const canvas = document.getElementById('gameCanvas');
+      const ctx = canvas.getContext('2d');
+      const cellSize = 60;
+      let n = 4;
+      let edges = new Array((n + 1) * n * 2).fill(-1);
+      let boxes = new Array(n * n).fill(-1);
+
+      socket.on('game_state', (state) => {
+        n = state.n || 4;
+        edges = state.edges || edges;
+        boxes = state.boxes || boxes;
+        updateStats(state);
+        drawBoard();
+      });
+
+      function updateStats(state) {
+        const currentPlayerColor = state.current_player === 0
+          ? `<span style="color: #2196f3">Blue</span>`
+          : `<span style="color: #4caf50">Green</span>`;
+        
+        document.getElementById('stats').innerHTML = `
+          <div class="stat-row">
+            <span class="stat-label">Episode:</span>
+            <span class="stat-value">${state.episode}</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Current Player:</span>
+            <span class="stat-value">${currentPlayerColor}</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Last Move:</span>
+            <span class="stat-value">${state.last_action}</span>
+          </div>
+          <div class="score-section">
+            <div class="stat-row">
+              <span class="stat-label">Blue Score:</span>
+              <span class="stat-value">${state.scores[0]}</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label">Green Score:</span>
+              <span class="stat-value">${state.scores[1]}</span>
+            </div>
+          </div>
+        `;
+      }
+      
+      function drawBoard() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const offsetX = (canvas.width - n * cellSize) / 2;
+        const offsetY = (canvas.height - n * cellSize) / 2;
+
+        for (let row = 0; row < n; row++) {
+          for (let col = 0; col < n; col++) {
+            drawBox(row, col, boxes[row * n + col], offsetX, offsetY);
+          }
+        }
+        
+        for (let row = 0; row <= n; row++) {
+          for (let col = 0; col < n; col++) {
+            drawHorizontalEdge(row, col, edges[row * n + col], offsetX, offsetY);
+          }
+        }
+        
+        for (let row = 0; row < n; row++) {
+          for (let col = 0; col <= n; col++) {
+            drawVerticalEdge(row, col, edges[n * (n + 1) + row * (n + 1) + col], offsetX, offsetY);
+          }
+        }
+      }
+
+      function drawBox(row, col, owner, offsetX, offsetY) {
+        if (owner !== -1) {
+          // Draw box background with softer colors
+          ctx.fillStyle = owner === 0 ? '#e3f2fd' : '#e8f5e9';  // Light pastel backgrounds
+          ctx.fillRect(offsetX + col * cellSize, offsetY + row * cellSize, cellSize, cellSize);
+          
+          // Draw player dot/icon with cleaner look
+          ctx.beginPath();
+          ctx.arc(
+            offsetX + col * cellSize + cellSize/2,
+            offsetY + row * cellSize + cellSize/2,
+            cellSize/4,
+            0,
+            2 * Math.PI
+          );
+          ctx.fillStyle = owner === 0 ? '#2196f3' : '#4caf50';  // Bright blue and green
+          ctx.fill();
+          // Remove white border
+        }
+      }
+
+      function drawHorizontalEdge(row, col, owner, offsetX, offsetY) {
+        const x1 = offsetX + col * cellSize;
+        const y1 = offsetY + row * cellSize;
+        const x2 = offsetX + (col + 1) * cellSize;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y1);
+        ctx.lineWidth = owner === -1 ? 2 : 4;
+        ctx.strokeStyle = owner === 0 ? '#2196f3' : owner === 1 ? '#4caf50' : '#ccc';
+        ctx.stroke();
+      }
+
+      function drawVerticalEdge(row, col, owner, offsetX, offsetY) {
+        const x1 = offsetX + col * cellSize;
+        const y1 = offsetY + row * cellSize;
+        const y2 = offsetY + (row + 1) * cellSize;
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x1, y2);
+        ctx.lineWidth = owner === -1 ? 2 : 4;
+        ctx.strokeStyle = owner === 0 ? '#2196f3' : owner === 1 ? '#4caf50' : '#ccc';
+        ctx.stroke();
+      }
+
+      drawBoard();
+
+      // Add training controls
+      const controls = {
+        pause: false,
+        speed: 1.0,
+        showQValues: false,
+        showReplayBuffer: false
+      };
+
+      // Update chart colors
+      const PLAYER_COLORS = {
+        player1: '#2196f3',  // Blue
+        player2: '#4caf50',  // Green
+        background1: '#e3f2fd',  // Light blue
+        background2: '#e8f5e9'  // Light green
+      };
+
+      // Initialize both charts
+      const winRateChart = new Chart(
+        document.getElementById('winRateChart').getContext('2d'),
+        {
+          type: 'line',
+          data: {
+            labels: [],
+            datasets: [{
+              label: 'Blue Win Rate',
+              data: [],
+              borderColor: PLAYER_COLORS.player1,
+              tension: 0.1
+            }, {
+              label: 'Green Win Rate',
+              data: [],
+              borderColor: PLAYER_COLORS.player2,
+              tension: 0.1
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: false,
+            scales: {
+              y: {
+                beginAtZero: true,
+                max: 1
+              }
+            }
+          }
+        }
+      );
+      
+      const evalChart = new Chart(
+        document.getElementById('evalChart').getContext('2d'),
+        {
+          type: 'line',
+          data: {
+            labels: [],
+            datasets: [{
+              label: 'Blue Eval Score',
+              data: [],
+              borderColor: PLAYER_COLORS.player1,
+              tension: 0.1
+            }, {
+              label: 'Green Eval Score',
+              data: [],
+              borderColor: PLAYER_COLORS.player2,
+              tension: 0.1
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: false,
+            scales: {
+              y: {
+                beginAtZero: true
+              }
+            }
+          }
+        }
+      );
+      
+      const qValueChart = new Chart(
+        document.getElementById('qValueChart').getContext('2d'),
+        {
+          type: 'line',
+          data: {
+            labels: [],
+            datasets: [{
+              label: 'Blue Q-Values',
+              data: [],
+              borderColor: PLAYER_COLORS.player1,
+              tension: 0.1
+            }, {
+              label: 'Green Q-Values',
+              data: [],
+              borderColor: PLAYER_COLORS.player2,
+              tension: 0.1
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: false
+          }
+        }
+      );
+      
+      const moveQualityChart = new Chart(
+        document.getElementById('moveQualityChart').getContext('2d'),
+        {
+          type: 'line',
+          data: {
+            labels: [],
+            datasets: [{
+              label: 'Move Quality',
+              data: [],
+              borderColor: '#9e9e9e',  // Neutral gray color
+              tension: 0.1
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: false,
+            scales: {
+              y: {
+                beginAtZero: true
+              }
+            }
+          }
+        }
+      );
+      
+      socket.on('training_metrics', (metrics) => {
+        // Update win rate chart
+        winRateChart.data.labels.push(metrics.episode);
+        winRateChart.data.datasets[0].data.push(metrics.win_rates[0]);
+        winRateChart.data.datasets[1].data.push(metrics.win_rates[1]);
+        winRateChart.update('none');  // Update without animation
+        
+        // Update eval chart if new eval data available
+        if (metrics.eval_scores) {
+          evalChart.data.labels.push(metrics.eval_episode);
+          evalChart.data.datasets[0].data.push(metrics.eval_scores[0]);
+          evalChart.data.datasets[1].data.push(metrics.eval_scores[1]);
+          evalChart.update('none');
+        }
+        
+        // Update Q-value chart
+        qValueChart.data.labels.push(metrics.episode);
+        qValueChart.data.datasets[0].data.push(metrics.avg_q_values[0]);
+        qValueChart.data.datasets[1].data.push(metrics.avg_q_values[1]);
+        qValueChart.update('none');
+        
+        // Update move quality chart
+        moveQualityChart.data.labels.push(metrics.episode);
+        moveQualityChart.data.datasets[0].data.push(metrics.move_quality);
+        moveQualityChart.update('none');
+      });
+
+      let isPaused = false;
+      let trainingSpeed = 1.0;
+
+      function toggleTraining() {
+        isPaused = !isPaused;
+        const button = document.getElementById('pauseButton');
+        button.querySelector('.btn-text').textContent = isPaused ? 'Resume' : 'Pause';
+        button.style.background = isPaused ? '#4caf50' : '#2196f3';
+        
+        // Emit pause state to server
+        socket.emit('set_training_state', { paused: isPaused });
+      }
+
+      function updateSpeed(value) {
+        trainingSpeed = parseFloat(value);
+        document.getElementById('speedValue').textContent = `${trainingSpeed.toFixed(1)}x`;
+        
+        // Emit speed to server
+        socket.emit('set_training_speed', { speed: trainingSpeed });
+      }
+
+      // Add event listeners
+      document.getElementById('pauseButton').addEventListener('click', toggleTraining);
+      document.getElementById('speedSlider').addEventListener('input', function() {
+        updateSpeed(this.value);
+      });
+
+      let selectedCheckpoint = null;
+      
+      // Request checkpoint list on page load
+      socket.emit('list_checkpoints');
+      
+      socket.on('checkpoints_list', (checkpoints) => {
+        const list = document.getElementById('checkpointsList');
+        list.innerHTML = checkpoints.map(cp => `
+          <div class="checkpoint-item" data-path="${cp.path}">
+            <span>Checkpoint</span>
+            <span class="episode-number">Episode ${cp.episode}</span>
+          </div>
+        `).join('');
+        
+        // Add click handlers
+        list.querySelectorAll('.checkpoint-item').forEach(item => {
+          item.addEventListener('click', () => {
+            document.querySelectorAll('.checkpoint-item').forEach(i => 
+              i.classList.remove('selected'));
+            item.classList.add('selected');
+            selectedCheckpoint = item.dataset.path;
+          });
+        });
+      });
+      
+      document.getElementById('startGame').addEventListener('click', () => {
+        if (!selectedCheckpoint) {
+          alert('Please select a checkpoint first');
+          return;
+        }
+        socket.emit('start_human_game', { checkpoint: selectedCheckpoint });
+      });
+      
+      document.getElementById('refreshCheckpoints').addEventListener('click', () => {
+        socket.emit('list_checkpoints');
+      });
+      
+      let currentGameId = null;
+
+      socket.on('human_game_started', (data) => {
+        currentGameId = data.game_id;
+        // Initialize game board with human player controls
+        initializeHumanGame(data);
+      });
+
+      socket.on('game_update', (data) => {
+        if (data.game_id !== currentGameId) return;
+        updateHumanGame(data);
+        
+        if (data.game_over) {
+          showGameResult(data.scores);
+        }
+      });
+
+      function handleBoardClick(event) {
+        if (!currentGameId) return;
+        
+        const rect = humanGameCanvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+        
+        // Convert click to move index
+        const move = convertClickToMove(x, y);
+        if (move !== null) {
+          socket.emit('human_move', {
+            game_id: currentGameId,
+            move: move
+          });
+        }
+      }
+
+      document.getElementById('humanGameCanvas').addEventListener('click', handleBoardClick);
+    </script>
+  </body>
+</html>
